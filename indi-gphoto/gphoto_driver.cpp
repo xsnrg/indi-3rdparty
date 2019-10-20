@@ -1055,12 +1055,74 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
     if (gphoto->format >= 0)
         gphoto_set_widget_num(gphoto, gphoto->format_widget, gphoto->format);
 
-    // Find EXACT optimal exposure index in case we need to use it. If -1, we always use blob made if available
-    int optimalExposureIndex = -1;
-
+#if 0
     // JM 2018-09-23: In case force bulb is off, then we search for optimal exposure index
     if (gphoto->force_bulb == false)
         optimalExposureIndex = find_exposure_setting(gphoto, gphoto->exposure_widget, exptime_usec, true);
+#endif
+
+    // Find EXACT optimal exposure index in case we need to use it. If -1, we always use blob made if available
+    // JM 2019-10-20: Instead of using forcing bulb, we check if we have a B/M camera or not.
+    int optimalExposureIndex = find_exposure_setting(gphoto, gphoto->exposure_widget, exptime_usec, true);
+
+    // Find auto exposure mode index (what camera dial is set to)
+    int autoexposuremode_index = -1;
+    // 3 => Manual, 4 => Bulb
+    if (gphoto->autoexposuremode_widget)
+        autoexposuremode_index = gphoto->autoexposuremode_widget->value.index;
+
+    // B/M camera
+    if (gphoto->bulb_exposure_index == -1)
+    {
+        // No exact shutterspeed exposure found. If mode is set to Manual, then we fail and ask user to change to Bulb first.
+        if (optimalExposureIndex == -1 && autoexposuremode_index == MODE_MANUAL)
+        {
+            if (exptime_usec < 1e6)
+                DEBUGDEVICE(device, INDI::Logger::DBG_ERROR, "No exact predefined exposure found. For sub-second exposures,"
+                            " please use an exact predefined exposure from the list.");
+            else
+                DEBUGDEVICE(device, INDI::Logger::DBG_ERROR, "No exact predefined exposure found. Set camera dial to BULB and try again.");
+            return -1;
+        }
+        // We found an exact exposure, however, camera mode is BULB, so we cannot use shutterspeed result anyway
+        else if (optimalExposureIndex != -1 && autoexposuremode_index == MODE_BULB)
+        {
+            DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Exact predefined exposure found (%d)"
+                         " However, camera is in bulb mode so predefined exposure result is discarded.", optimalExposureIndex);
+            // If request duration is less than a second, warn user that it's not going to be accurate.
+            if (exptime_usec < 1e6)
+                DEBUGDEVICE(device, INDI::Logger::DBG_WARNING, "Requested exposure duration is not suitable for BULB exposures. Set camera dial to MANUAL.");
+            optimalExposureIndex = -1;
+        }
+    }
+    // Regular camera
+    else if (gphoto->exposure_widget)
+    {
+        if (optimalExposureIndex == -1 && exptime_usec < 1e6)
+        {
+            int closestExposure = find_exposure_setting(gphoto, gphoto->exposure_widget, exptime_usec, false);
+            if (closestExposure == -1)
+                DEBUGDEVICE(device, INDI::Logger::DBG_WARNING, "Requested exposure duration is not suitable for BULB exposures. For sub-second exposures,"
+                            " please use an exact predefined exposure from the list.");
+            else
+            {
+                DEBUGFDEVICE(device, INDI::Logger::DBG_WARNING, "Requested exposure duration is not suitable for BULB exposures."
+                             " The closest exact exposure is %.6f seconds.", gphoto->exposureList[closestExposure]);
+            }
+        }
+    }
+
+    // Make sure camera is either set to BULB or MANUAL
+    if (autoexposuremode_index != -1 &&
+            autoexposuremode_index != MODE_BULB &&
+            autoexposuremode_index != MODE_MANUAL)
+    {
+        DEBUGFDEVICE(device, INDI::Logger::DBG_WARNING,  "Camera auto exposure mode is not set to either BULB or MANUAL modes (%s)."
+                     " Please set mode to BULB for long exposures.",
+                     gphoto->autoexposuremode_widget->choices[static_cast<uint8_t>(gphoto->autoexposuremode_widget->value.index)]);
+
+    }
+
 
     // Set Capture Target
     // JM: 2017-05-21: Disabled now since user can explicity set capture target via the driver interface
@@ -1090,10 +1152,11 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
             (gphoto->bulb_widget != nullptr && optimalExposureIndex == -1))
     {
         // Check if we are in BULB or MANUAL or other mode. Always set it to BULB if needed
+#if 0
         if (gphoto->bulb_widget && gphoto->autoexposuremode_widget)
         {
             // If it settings is not either MANUAL or BULB then warn the user.
-            if (gphoto->autoexposuremode_widget->value.index < 3 || gphoto->autoexposuremode_widget->value.index > 4)
+            if (gphoto->autoexposuremode_widget->value.index != MODE_MANUAL && gphoto->autoexposuremode_widget->value.index != MODE_BULB)
             {
                 DEBUGFDEVICE(device, INDI::Logger::DBG_WARNING,
                              "Camera auto exposure mode is not set to either BULB or MANUAL modes (%s). Please set mode to BULB "
@@ -1101,6 +1164,7 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
                              gphoto->autoexposuremode_widget->choices[static_cast<uint8_t>(gphoto->autoexposuremode_widget->value.index)]);
             }
         }
+#endif
 
         // We set bulb setting for exposure widget if it is defined by the camera
         if (gphoto->exposureList && gphoto->exposure_widget->type != GP_WIDGET_TEXT && gphoto->bulb_exposure_index != -1)

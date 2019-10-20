@@ -67,6 +67,19 @@ enum
     EOS_RELEASE_3
 };
 
+// Autoexposure modes (Canon only?)
+enum
+{
+    MODE_P,
+    MODE_TV,
+    MODE_AV,
+    MODE_MANUAL,
+    MODE_BULB,
+    MODE_A_DEP,
+    MODE_DEP,
+    MODE_CUSTOM,
+};
+
 struct _gphoto_driver;
 typedef struct _gphoto_driver gphoto_driver;
 
