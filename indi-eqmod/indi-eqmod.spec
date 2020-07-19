@@ -59,6 +59,7 @@ Summary: INDI eqmod driver
 INDI eqmod driver
 
 %prep
+%forgesetupargs -n indi-eqmod
 %forgesetup
 
 %build
