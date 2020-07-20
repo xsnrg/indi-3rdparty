@@ -5,12 +5,12 @@ Version: 1.8.6.git
 Release: 1%{?dist}
 Summary: Instrument Neutral Distributed Interface 3rd party drivers
 
-License: LGPLv2+167
+License: LGPLv2
 # See COPYRIGHT file for a description of the licenses and files covered
 
 %forgemeta -i
 
-URL: http://www.indilib.org
+URL: %{forgeurl}
 Source0: %{forgesource}
 
 BuildRequires: cmake
@@ -53,14 +53,8 @@ and scalable. It supports common DCS functions such as remote control,
 data acquisition, monitoring, and a lot more. This is a 3rd party driver.
 
 
-%package eqmod
-Summary: INDI eqmod driver
-%description eqmod
-INDI eqmod driver
-
-%prep
-%forgesetupargs -n indi-eqmod
-%forgesetup
+%prep -v
+%forgesetup -v
 
 %build
 # This package tries to mix and match PIE and PIC which is wrong and will
