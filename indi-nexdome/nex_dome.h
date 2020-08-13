@@ -74,7 +74,12 @@ class NexDome : public INDI::Dome
         /// Properties
         /////////////////////////////////////////////////////////////////////////////
         ISwitchVectorProperty GoHomeSP;
-        ISwitch GoHomeS[1];
+        ISwitch GoHomeS[2];
+        enum
+        {
+            HOME_FIND,
+            HOME_GOTO,
+        };
 
         INumberVectorProperty HomePositionNP;
         INumber HomePositionN[1];
@@ -109,7 +114,7 @@ class NexDome : public INDI::Dome
             S_RAMP,
             S_VELOCITY,
             S_ZONE,
-            S_RANGE,
+            S_RANGE
         };
 
         INumberVectorProperty RotatorSettingsNP;
@@ -117,6 +122,12 @@ class NexDome : public INDI::Dome
 
         INumberVectorProperty ShutterSettingsNP;
         INumber ShutterSettingsN[2];
+
+        INumberVectorProperty RotatorSyncNP;
+        INumber RotatorSyncN[1];
+
+        INumberVectorProperty ShutterSyncNP;
+        INumber ShutterSyncN[1];
 
     private:
         ///////////////////////////////////////////////////////////////////////////////
@@ -150,6 +161,9 @@ class NexDome : public INDI::Dome
         /// Private Members
         ///////////////////////////////////////////////////////////////////////////////
         bool m_ShutterConnected { false };
+        int32_t m_TargetAZSteps {1000000};
+        int32_t m_DomeAzThreshold {10};
+        double StepsPerDegree { 153.0 };
 
 };
 
